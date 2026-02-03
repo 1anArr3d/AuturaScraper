@@ -1,18 +1,45 @@
 from playwright.sync_api import sync_playwright
+import time
 
-def scrape_name(auctionid):
+base_url = "https://app.marketplace.autura.com"
+start_time = time.perf_counter()
+
+def scrape_data(auctionid, city):
     with sync_playwright() as p:
-        url = f"https://app.marketplace.autura.com/auction/SA-TX/auction-{auctionid}"
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(url)
-        
-        page.wait_for_selector(".ant-card-meta-title")
-        titles = page.query_selector_all(".ant-card-meta-title")
 
-        for title in titles:
-            print(title.text_content().strip())
+        block_types = {"image", "media", "font",}
+        page.route("**/*", lambda r: r.abort() if r.request.resource_type in block_types else r.continue_())
 
+        url = f"{base_url}/auction/{city}/auction-{auctionid}"
+        page.goto(url, wait_until="domcontentloaded")
+
+        page.wait_for_selector('a[href*="/vehicle/"]')
+        car_links = page.query_selector_all('a[href*="/vehicle/"]')
+
+        vehicle_page = browser.new_page()
+        vehicle_page.route("**/*", lambda r: r.abort() if r.request.resource_type in block_types else r.continue_())
+
+        for link in car_links:
+            href = link.get_attribute("href")
+            vehicle_page.goto(f"{base_url}{href}", wait_until="domcontentloaded")
+
+            table_block = vehicle_page.wait_for_selector("div.ant-table-content")
+            rows = table_block.query_selector_all("tr")
+
+            for row in rows:
+                cells = row.query_selector_all("td")
+                name = cells[0].inner_text().strip()
+                value = cells[1].inner_text().strip()
+                print(f"{name}: {value}")
+
+        # Close pages and browser after loop
+        vehicle_page.close()
+        page.close()
         browser.close()
 
-scrape_name(108922)
+scrape_data(108309, "SA-TX")
+
+end_time = time.perf_counter()
+print(f"Runtime: {end_time - start_time:.3f} seconds")
