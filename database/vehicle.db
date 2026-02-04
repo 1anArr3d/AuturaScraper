@@ -28,5 +28,3 @@ CREATE TABLE IF NOT EXISTS vehicles (
 
 conn.commit()
 conn.close()
-
-print("DB initialized")

@@ -44,6 +44,9 @@ def scrape_data(auctionid, city):
     
     return data
 
-vehicles = scrape_data(108767, "SA-TX")
+def mileage_checker(Vin):
+    pass
+
+vehicles = scrape_data(108860, "SA-TX")
 vehicles_json = json.dumps(vehicles, indent=2)
 print(vehicles_json)
