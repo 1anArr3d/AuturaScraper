@@ -3,7 +3,7 @@ import re
 import json
 from playwright.async_api import async_playwright
 
-async def scrape_inspections():
+async def scrape_inspections(VIN):
     results = []
 
     async with async_playwright() as p:
@@ -12,6 +12,15 @@ async def scrape_inspections():
         page = await context.new_page()
 
         await page.goto("https://www.mytxcar.org/TXCar_Net/VehicleTestDetail.aspx") 
+
+        # Waits for the captcha to be over to click the submit button
+        await page.wait_for_function("document.querySelector('[name=\"cf-turnstile-response\"]').value.length > 0")
+        await page.locator('input[type="submit"]').click()
+
+        #Autfill vin number
+        vin_input = page.locator("#txtVin")
+        await vin_input.fill(VIN)
+        await page.locator('input[title="Search"]').click()
 
         link_selector = "a[onclick*='DoSelect']"
         await page.wait_for_selector(link_selector)
@@ -64,5 +73,5 @@ async def scrape_inspections():
         return results
 
 if __name__ == "__main__":
-    data = asyncio.run(scrape_inspections())
+    data = asyncio.run(scrape_inspections("1FMCU0DG8AKD39728"))
     print(json.dumps(data, indent=2))
